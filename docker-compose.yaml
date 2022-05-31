@@ -1,0 +1,69 @@
+version: '3.8'
+
+services:
+
+  app:
+    build:
+      context: ./dockerfiles/app
+      dockerfile: Dockerfile
+    container_name: huggy_app
+    volumes:
+      - ./app-vue/:/app
+    working_dir: /app
+    ports:
+      - 8090:8080
+    restart: always
+    # command: ['yarn', 'serve']
+    networks:
+      - network
+
+  api:
+    build:
+      args:
+        user: huggy
+        uid: 1000
+      context: ./dockerfiles/api
+      dockerfile: Dockerfile
+    working_dir: /var/www/
+    container_name: huggy_api
+    volumes:
+      - ./api-laravel/:/var/www
+    restart: always
+    depends_on:
+      - mysql
+    networks:
+      - network
+
+  nginx:
+    image: nginx:alpine
+    container_name: huggy_nginx
+    restart: always
+    ports:
+      - 8095:80
+    volumes:
+      - ./api-laravel/:/var/www
+      - ./docker/nginx/:/etc/nginx/conf.d/
+    depends_on:
+      - api
+    networks:
+      - network   
+
+  mysql:
+    image: mysql:5.7.22
+    container_name: huggy_mysql
+    ports:
+      - 3310:3306
+    volumes:
+      - ./.docker/mysql:/var/lib/mysql
+    environment:
+      MYSQL_DATABASE: "huggy"
+      MYSQL_USER: "root"
+      MYSQL_PASSWORD: "huggy"
+      MYSQL_ROOT_PASSWORD: "huggy"
+    restart: always
+    networks:
+      - network
+
+networks:
+  network:
+    driver: bridge
